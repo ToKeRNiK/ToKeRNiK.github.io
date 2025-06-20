@@ -568,23 +568,44 @@
 
         // Добавление работника
         async function addWorker() {
-            const name = document.getElementById('newWorkerName').value.trim();
+            try {
+                const nameInput = document.getElementById('newWorkerName');
+                const name = nameInput.value.trim();
+        
             if (!name) {
                 showToast("Введите имя сотрудника", true);
                 return;
             }
-            
-            const daysInMonth = getDaysInMonth().length;
-            workersData.push({
+        
+            // Создаём нового сотрудника
+            const newWorker = {
                 name: name,
-                hours: Array(daysInMonth).fill(''),
-                lockedHours: Array(daysInMonth).fill(false),
+                hours: Array(getDaysInMonth().length).fill(''),
+                lockedHours: Array(getDaysInMonth().length).fill(false),
                 nameLocked: false
-            });
-            
-            if (await saveData()) {
+            };
+        
+            console.log("Добавляем сотрудника:", newWorker); // Логируем
+        
+            // Добавляем в массив
+            workersData.push(newWorker);
+        
+            // Сохраняем
+            const success = await saveData();
+        
+            if (success) {
+                // Обновляем интерфейс
                 renderTable();
-                document.getElementById('newWorkerName').value = '';
+                nameInput.value = '';
+                showToast("Сотрудник успешно добавлен");
+            } else {
+                showToast("Сотрудник добавлен локально", false);
+                renderTable();
+                nameInput.value = '';
+            }
+            } catch (error) {
+                console.error("Ошибка в addWorker:", error);
+                showToast("Произошла ошибка при добавлении", true);
             }
         }
 
