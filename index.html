@@ -388,40 +388,46 @@
         // Сохранение данных
         async function saveData() {
             try {
-                // 1. Сохраняем локально
+                // Всегда сохраняем локально
                 localStorage.setItem('workersData', JSON.stringify(workersData));
-                
-                // 2. Пробуем синхронизировать с GitHub
-                if (isOnline) {
+        
+                // Пробуем сохранить в GitHub только если онлайн и есть токен
+                if (isOnline && GITHUB_TOKEN && GITHUB_TOKEN !== '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') {
                     const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                         method: 'PATCH',
                         headers: {
                             'Authorization': `token ${GITHUB_TOKEN}`,
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/vnd.github.v3+json'
                         },
                         body: JSON.stringify({
+                            description: "WorkTime Tracker Data",
                             files: {
                                 'data.json': {
-                                    content: JSON.stringify({ 
+                                    content: JSON.stringify({
                                         workers: workersData,
                                         lastUpdated: new Date().toISOString()
                                     })
                                 }
                             }
                         })
-                    });
-                    
-                    if (!response.ok) throw new Error("GitHub API error");
-                    
-                    lastSyncTime = new Date();
-                    updateSyncStatus();
-                    showToast("Данные сохранены в облаке");
-                    return true;
+                });
+
+                if (!response.ok) {
+                    const errorDetails = await response.json().catch(() => ({}));
+                    console.error("GitHub API Error Details:", errorDetails);
+                    throw new Error(`GitHub Error: ${response.status} ${response.statusText}`);
                 }
-                return false;
+
+                lastSyncTime = new Date();
+                showToast("Данные сохранены в облаке");
+                return true;
+            }
+            showToast("Данные сохранены локально");
+            return false;
             } catch (e) {
-                console.error("Ошибка сохранения:", e);
-                showToast("Ошибка сохранения. Данные сохранены локально", true);
+                console.error("Полная ошибка сохранения:", e);
+                showToast("Данные сохранены локально. Ошибка облака: " + e.message, true);
                 return false;
             }
         }
