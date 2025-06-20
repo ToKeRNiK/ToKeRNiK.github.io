@@ -3,103 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет рабочего времени</title>
+    <title>WorkTime Tracker</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #4895ef;
+            --danger: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --success: #4cc9f0;
         }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: white;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-bottom: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #4CAF50;
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
+            padding: 20px 0;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            font-weight: 600;
+            font-size: 2.2rem;
+        }
+        
+        .admin-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        input {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+        
+        .worker-name-input {
+            min-width: 200px;
+            flex-grow: 1;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        #addWorkerBtn {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        #adminBtn {
+            background-color: var(--accent);
+            color: white;
+        }
+        
+        #unlockAllBtn, #lockAllBtn, #logoutBtn {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .delete-btn {
+            background-color: var(--danger);
+            color: white;
+            padding: 5px 10px;
+            font-size: 0.9rem;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background-color: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 500;
             position: sticky;
             top: 0;
         }
-        input {
-            padding: 8px;
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
         }
-        .worker-name-input {
-            min-width: 150px;
+        
+        tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
         }
+        
         .hour-input {
-            max-width: 60px;
+            max-width: 70px;
+            padding: 8px 10px;
+            text-align: center;
         }
-        button {
-            padding: 8px 15px;
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-right: 10px;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-        .delete-btn {
-            background-color: #ff4444;
-        }
+        
         .total-cell {
-            background-color: #e6f7ff;
-            font-weight: bold;
+            background-color: rgba(76, 201, 240, 0.1);
+            font-weight: 600;
+            color: var(--dark);
         }
-        .admin-panel {
-            background: #f8f9fa;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-        }
+        
         .locked {
-            background-color: #f9f9f9;
+            background-color: rgba(108, 117, 125, 0.05);
+        }
+        
+        .status-bar {
+            background-color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        @media (max-width: 768px) {
+            .admin-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            input, button {
+                width: 100%;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Учет рабочего времени</h1>
+        <header>
+            <h1>WorkTime Tracker</h1>
+        </header>
         
         <div class="admin-panel">
-            <input type="password" id="adminPassword" placeholder="Пароль администратора">
-            <button id="adminBtn">Войти как администратор</button>
-            <button id="logoutBtn" style="display:none;">Выйти</button>
+            <input type="password" id="adminPassword" placeholder="Пароль администратора" class="worker-name-input">
+            <button id="adminBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"></path>
+                    <path d="M22 17v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2"></path>
+                    <circle cx="12" cy="7" r="1"></circle>
+                </svg>
+                Войти как администратор
+            </button>
+            <button id="logoutBtn" style="display:none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                Выйти
+            </button>
         </div>
         
-        <table id="workersTable">
-            <thead>
-                <tr id="daysHeader">
-                    <th>Имя работника</th>
-                    <!-- Дни будут добавлены скриптом -->
-                </tr>
-            </thead>
-            <tbody id="workersBody"></tbody>
-        </table>
+        <div class="table-container">
+            <table id="workersTable">
+                <thead>
+                    <tr id="daysHeader">
+                        <th>Сотрудник</th>
+                        <!-- Дни будут добавлены автоматически -->
+                    </tr>
+                </thead>
+                <tbody id="workersBody"></tbody>
+            </table>
+        </div>
         
-        <div>
-            <input type="text" id="newWorkerName" placeholder="Имя нового работника" class="worker-name-input">
-            <button id="addWorkerBtn">Добавить работника</button>
+        <div class="admin-panel">
+            <input type="text" id="newWorkerName" placeholder="Имя нового сотрудника" class="worker-name-input">
+            <button id="addWorkerBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14"></path>
+                    <path d="M5 12h14"></path>
+                </svg>
+                Добавить сотрудника
+            </button>
+        </div>
+        
+        <div class="status-bar">
+            <div id="syncStatus">Последняя синхронизация: только что</div>
+            <div id="workerCount">Сотрудников: 0</div>
         </div>
     </div>
 
@@ -107,7 +262,7 @@
         // Конфигурация
         const GIST_ID = '9f1daa9790a6da04f88aa798bc98dd85';
         const GIST_TOKEN = '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';
-        const ADMIN_PASSWORD = "AdminVova12";
+        const ADMIN_PASSWORD = "AdminVova";
         
         let isAdmin = false;
         let workersData = [];
