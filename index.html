@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учет рабочего времени</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        input {
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .worker-name-input {
+            min-width: 150px;
+        }
+        .hour-input {
+            max-width: 60px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .delete-btn {
+            background-color: #ff4444;
+        }
+        .total-cell {
+            background-color: #e6f7ff;
+            font-weight: bold;
+        }
+        .admin-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .locked {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Учет рабочего времени</h1>
+        
+        <div class="admin-panel">
+            <input type="password" id="adminPassword" placeholder="Пароль администратора">
+            <button id="adminBtn">Войти как администратор</button>
+            <button id="logoutBtn" style="display:none;">Выйти</button>
+        </div>
+        
+        <table id="workersTable">
+            <thead>
+                <tr id="daysHeader">
+                    <th>Имя работника</th>
+                    <!-- Дни будут добавлены скриптом -->
+                </tr>
+            </thead>
+            <tbody id="workersBody"></tbody>
+        </table>
+        
+        <div>
+            <input type="text" id="newWorkerName" placeholder="Имя нового работника" class="worker-name-input">
+            <button id="addWorkerBtn">Добавить работника</button>
+        </div>
+    </div>
+
+    <script>
+        // Конфигурация
+        const GIST_ID = 'f5e0d396fe851f3b077a7e4947df7e16';
+        const GIST_TOKEN = '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';
+        const ADMIN_PASSWORD = "AdminVova";
+        
+        let isAdmin = false;
+        let workersData = [];
+
+        // Получить дни месяца
+        function getDaysInMonth() {
+            const date = new Date();
+            const days = [];
+            const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            
+            for (let i = 1; i <= daysInMonth; i++) {
+                days.push(i);
+            }
+            
+            return days;
+        }
+
+        // Загрузка данных
+        async function loadData() {
+            try {
+                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+                if (!response.ok) throw new Error("Ошибка загрузки");
+                
+                const gistData = await response.json();
+                const content = gistData.files['data.json'].content;
+                workersData = JSON.parse(content).workers || [];
+                renderTable();
+            } catch (error) {
+                console.error("Ошибка загрузки:", error);
+                // Пробуем загрузить из localStorage
+                const localData = localStorage.getItem('workersData');
+                if (localData) {
+                    workersData = JSON.parse(localData);
+                    renderTable();
+                }
+            }
+        }
+
+        // Сохранение данных
+        async function saveData() {
+            try {
+                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${GITHUB_TOKEN}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            'data.json': {
+                                content: JSON.stringify({ workers: workersData })
+                            }
+                        }
+                    })
+                });
+                
+                if (!response.ok) throw new Error("Ошибка сохранения");
+                
+                // Дублируем в localStorage
+                localStorage.setItem('workersData', JSON.stringify(workersData));
+                return true;
+            } catch (error) {
+                console.error("Ошибка сохранения:", error);
+                return false;
+            }
+        }
+
+        // Отрисовка таблицы
+        function renderTable() {
+            const days = getDaysInMonth();
+            const headerRow = document.getElementById('daysHeader');
+            const tbody = document.getElementById('workersBody');
+            
+            // Очищаем заголовки
+            headerRow.innerHTML = '<th>Имя работника</th>';
+            
+            // Добавляем дни в заголовок
+            days.forEach(day => {
+                headerRow.innerHTML += `<th>${day}</th>`;
+            });
+            
+            headerRow.innerHTML += '<th>Всего часов</th>';
+            if (isAdmin) headerRow.innerHTML += '<th>Действия</th>';
+            
+            // Очищаем тело таблицы
+            tbody.innerHTML = '';
+            
+            // Добавляем работников
+            workersData.forEach((worker, workerIndex) => {
+                const row = document.createElement('tr');
+                let totalHours = 0;
+                
+                // Ячейка с именем
+                const nameCell = document.createElement('td');
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'worker-name-input';
+                nameInput.value = worker.name || '';
+                nameInput.disabled = !isAdmin && worker.nameLocked;
+                nameInput.addEventListener('change', () => {
+                    updateWorkerName(workerIndex, nameInput.value);
+                });
+                nameCell.appendChild(nameInput);
+                row.appendChild(nameCell);
+                
+                // Ячейки с часами
+                days.forEach((day, dayIndex) => {
+                    const cell = document.createElement('td');
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.step = '0.01';
+                    input.min = '0';
+                    input.className = 'hour-input';
+                    input.value = worker.hours && worker.hours[dayIndex] ? worker.hours[dayIndex] : '';
+                    input.disabled = !isAdmin && worker.lockedHours && worker.lockedHours[dayIndex];
+                    
+                    if (worker.lockedHours && worker.lockedHours[dayIndex]) {
+                        input.classList.add('locked');
+                    }
+                    
+                    input.addEventListener('change', () => {
+                        updateHours(workerIndex, dayIndex, input.value);
+                    });
+                    
+                    // Считаем общее время
+                    if (worker.hours && worker.hours[dayIndex]) {
+                        totalHours += parseFloat(worker.hours[dayIndex]) || 0;
+                    }
+                    
+                    cell.appendChild(input);
+                    row.appendChild(cell);
+                });
+                
+                // Ячейка с общим временем
+                const totalCell = document.createElement('td');
+                totalCell.className = 'total-cell';
+                totalCell.textContent = totalHours.toFixed(2);
+                row.appendChild(totalCell);
+                
+                // Кнопка удаления (только для админа)
+                if (isAdmin) {
+                    const actionCell = document.createElement('td');
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = 'Удалить';
+                    deleteBtn.addEventListener('click', () => deleteWorker(workerIndex));
+                    actionCell.appendChild(deleteBtn);
+                    row.appendChild(actionCell);
+                }
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // Добавление работника
+        async function addWorker() {
+            const name = document.getElementById('newWorkerName').value.trim();
+            if (!name) {
+                alert('Введите имя работника');
+                return;
+            }
+            
+            const daysInMonth = getDaysInMonth().length;
+            workersData.push({
+                name: name,
+                hours: Array(daysInMonth).fill(''),
+                lockedHours: Array(daysInMonth).fill(false),
+                nameLocked: false
+            });
+            
+            if (await saveData()) {
+                renderTable();
+                document.getElementById('newWorkerName').value = '';
+            } else {
+                alert('Ошибка при сохранении');
+            }
+        }
+
+        // Обновление имени работника
+        async function updateWorkerName(index, newName) {
+            if (!newName.trim()) {
+                alert('Имя не может быть пустым');
+                return;
+            }
+            
+            workersData[index].name = newName;
+            if (!isAdmin) workersData[index].nameLocked = true;
+            
+            if (!await saveData()) {
+                alert('Ошибка при сохранении');
+            }
+        }
+
+        // Обновление часов
+        async function updateHours(workerIndex, dayIndex, hours) {
+            if (hours && (isNaN(hours) || parseFloat(hours) < 0)) {
+                alert('Введите корректное количество часов');
+                return;
+            }
+            
+            if (!workersData[workerIndex].hours) {
+                workersData[workerIndex].hours = [];
+            }
+            
+            workersData[workerIndex].hours[dayIndex] = hours;
+            
+            if (!isAdmin) {
+                if (!workersData[workerIndex].lockedHours) {
+                    workersData[workerIndex].lockedHours = [];
+                }
+                workersData[workerIndex].lockedHours[dayIndex] = true;
+            }
+            
+            if (!await saveData()) {
+                alert('Ошибка при сохранении');
+            } else {
+                renderTable();
+            }
+        }
+
+        // Удаление работника
+        async function deleteWorker(index) {
+            if (!isAdmin) return;
+            
+            if (confirm(`Удалить работника ${workersData[index].name}?`)) {
+                workersData.splice(index, 1);
+                
+                if (!await saveData()) {
+                    alert('Ошибка при удалении');
+                } else {
+                    renderTable();
+                }
+            }
+        }
+
+        // Вход/выход администратора
+        function toggleAdminMode() {
+            const password = document.getElementById('adminPassword').value;
+            
+            if (!isAdmin) {
+                if (password !== ADMIN_PASSWORD) {
+                    alert('Неверный пароль');
+                    return;
+                }
+                isAdmin = true;
+                document.getElementById('adminBtn').textContent = 'Режим администратора';
+                document.getElementById('logoutBtn').style.display = 'inline-block';
+                document.getElementById('adminPassword').value = '';
+            } else {
+                isAdmin = false;
+                document.getElementById('adminBtn').textContent = 'Войти как администратор';
+                document.getElementById('logoutBtn').style.display = 'none';
+            }
+            
+            renderTable();
+        }
+
+        // Автообновление данных
+        function startAutoRefresh() {
+            setInterval(() => {
+                loadData();
+            }, 30000); // Обновление каждые 30 секунд
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            startAutoRefresh();
+            
+            document.getElementById('addWorkerBtn').addEventListener('click', addWorker);
+            document.getElementById('adminBtn').addEventListener('click', toggleAdminMode);
+            document.getElementById('logoutBtn').addEventListener('click', toggleAdminMode);
+        });
+    </script>
+</body>
+</html>
